@@ -608,7 +608,7 @@ class Cutout:
             .sum()
         )
         return data.to_xarray().reindex_like(self.data).fillna(0)
-
+    @property
     def prints2 (self):
         x="it works"
         return self.x
