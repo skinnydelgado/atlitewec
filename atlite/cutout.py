@@ -610,8 +610,8 @@ class Cutout:
         return data.to_xarray().reindex_like(self.data).fillna(0)
 
     def prints (self):
-        prints ('it works!')
-    
+        x="it works"
+        return x
     availabilitymatrix = compute_availabilitymatrix
 
     # Preparation functions
