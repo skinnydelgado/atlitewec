@@ -611,7 +611,7 @@ class Cutout:
 
     def prints2 (self):
         x="it works"
-        return x
+        return self.x
     
     availabilitymatrix = compute_availabilitymatrix
 
