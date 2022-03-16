@@ -609,9 +609,8 @@ class Cutout:
         )
         return data.to_xarray().reindex_like(self.data).fillna(0)
 
-    def prints2 (self):
-        x="it works"
-        return self.x
+    def prints2 (self):    
+        print ('finally it works')
     
     availabilitymatrix = compute_availabilitymatrix
 
