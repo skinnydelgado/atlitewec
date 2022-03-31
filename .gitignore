@@ -23,3 +23,6 @@ atlite/version.py
 paper
 .coverage*
 !.coveragerc
+western-europe-2011-01.nc
+test.nc
+power_matrix.nc

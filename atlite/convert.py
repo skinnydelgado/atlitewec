@@ -11,6 +11,7 @@ from collections import namedtuple
 import xarray as xr
 import numpy as np
 import pandas as pd
+#from function_test2 import Tp_ind
 import geopandas as gpd
 import datetime as dt
 from operator import itemgetter
@@ -533,60 +534,48 @@ def wind(cutout, turbine, smooth=False, **params):
 def convert_wec(ds):
 
     #Get power matrix
-    with open(r'./atlite/resources/wecgenerator/Farshore_750kW.yaml') as file:
-        gen = yaml.full_load(file)
-    power_matrix =pd.DataFrame.from_dict( gen['Power_Matrix'])
+    power_matrix = pd.read_excel("PowerMatrix_PyPsa.xlsx", header = 2, usecols= "C:AN", index_col=0)
+    #pm = power_matrix.to_xarray()
+    #power_matrix = gen['Power_Matrix']
 
     #max power
     max_pow = power_matrix.to_numpy().max()
+    #max_pow = 750
  
     ###Round up values of Hs an Tp creating new datarrays
-    Hs = np.ceil(ds.wave_height*2)/2
-    Tp = np.ceil(ds.wave_period*2)/2
+    Hs = np.ceil(ds['wave_height']*2)/2
+    Tp = np.ceil(ds['wave_period']*2)/2
 
-    #Empty dataarray of results
-    da = xr.DataArray.copy(Hs)
-    da[:] = np.nan
-    da = da.rename('Specific power generation')
-    #Call datarrays values from the above dataset Dataset. need to modify function
-    #
-    #data arrya with results
+    Hs_list = Hs.to_numpy().flatten().tolist()
+    Tp_list = Tp.to_numpy().flatten().tolist()
 
+    power_list = []
+    cases = len(Hs_list)
+    count = 0
 
-    for x in da.x.values:
-        
-        for y in da.y.values:
-            
-            for t in da.time.values:
+    for Hs_ind, Tp_ind in zip(Hs_list, Tp_list):
+        if count % 1000 == 0:
+            print('Case {} of {}: {} %'.format(count, cases, count/cases * 100))
+
+        if np.isnan(Hs_ind) or np.isnan(Tp_ind):
+            power_list.append(np.nan)
+        else:
+            generated_power = power_matrix.loc[Hs_ind, Tp_ind]
+            power_list.append(generated_power/max_pow)
+
+        count += 1            
                 
-                Hs_i= Hs.sel(x=x, y=y, time=t).values 
-                Tp_i = Tp.sel(x=x, y=y, time=t).values
-                if np.isnan(Hs_i) or np.isnan(Tp_i):
-                    power = np.nan
-                else:
-                    power =power_matrix.loc[Hs_i, Tp_i]
-                cap = power/max_pow
-                da.loc[dict(x= x, y= y,time = t )] = cap
-                print (t, x, y)
-                print (Hs_i, Tp_i, power, cap)
+    power_list_np = np.array(power_list)
 
+    power_list_np = power_list_np.reshape(Hs.shape)       
 
-    
-
-    # da = xr.apply_ufunc(
-    #     _interpolate,
-    #     wnd_hub,
-    #     input_core_dims=[[]],
-    #     output_core_dims=[[]],
-    #     output_dtypes=[wnd_hub.dtype],
-    #     dask="parallelized",
-    # )
-
-    da.attrs["units"] = "MWh/MWp"
+    da = xr.DataArray(power_list_np, 
+                        coords = Hs.coords, 
+                        dims = Hs.dims, 
+                        name = 'Power generated')
+    da.attrs["units"] = "KWh/KWp"
     da = da.rename("specific generation")
     return da
-
-
 def wec(cutout, **params):
     """
     Generate wind generation time-series
@@ -595,23 +584,14 @@ def wec(cutout, **params):
     height and evaluates the power curve.
 
     Parameters
-    ----------
-    turbine : str or dict
-        A turbineconfig dictionary with the keys 'hub_height' for the
-        hub height and 'V', 'POW' defining the power curve.
-        Alternatively a str refering to a local or remote turbine configuration
-        as accepted by atlite.resource.get_windturbineconfig().
 
 
     """
 
-    if isinstance(turbine, (str, Path)):
-        turbine = get_windturbineconfig(turbine)
-
+ 
     return cutout.convert_and_aggregate(
-        convert_func=convert_wec, turbine=turbine, **params
+        convert_func=convert_wec,  **params
     )
-
 
 # solar PV
 def convert_pv(ds, panel, orientation, trigon_model="simple", clearsky_model="simple"):
