@@ -54,6 +54,8 @@ features = {
     ],
     "temperature": ["temperature", "soil temperature"],
     "runoff": ["runoff"],
+    "wave_height" : ["wave_height"],
+    "wave_period" : ["wave_period"]
 }
 
 static_features = {"height"}
@@ -211,6 +213,43 @@ def get_data_runoff(retrieval_params):
 def sanitize_runoff(ds):
     """Sanitize retrieved runoff data."""
     ds["runoff"] = ds["runoff"].clip(min=0.0)
+    return ds
+
+
+def get_data_wave_height(retrieval_params):
+    """Get wave height data for given retrieval parameters."""
+    ds = retrieve_data(
+        variable=[
+            "significant_height_of_combined_wind_waves_and_swell"
+        ], 
+        **retrieval_params)
+
+    ds = _rename_and_clean_coords(ds)
+    ds = ds.rename({"swh": "wave_height"})
+
+    return ds
+
+
+def sanitize_wave_height(ds):
+    """Sanitize retrieved wave height data."""
+    ds["wave_height"] = ds["wave_height"].clip(min=0.0)
+    return ds
+
+
+def get_data_wave_period(retrieval_params):
+    """Get wave period data for given retrieval parameters."""
+    ds = retrieve_data(
+        variable=["peak_wave_period"], **retrieval_params)
+
+    ds = _rename_and_clean_coords(ds)
+    ds = ds.rename({"pp1d": "wave_period"})
+
+    return ds
+
+
+def sanitize_wave_period(ds):
+    """Sanitize retrieved wave period data."""
+    ds["wave_period"] = ds["wave_period"].clip(min=0.0)
     return ds
 
 

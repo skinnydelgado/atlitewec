@@ -18,6 +18,7 @@ from pathlib import Path
 from dask import delayed, compute
 from dask.diagnostics import ProgressBar
 from scipy.sparse import csr_matrix
+import yaml
 
 import logging
 
@@ -526,6 +527,89 @@ def wind(cutout, turbine, smooth=False, **params):
 
     return cutout.convert_and_aggregate(
         convert_func=convert_wind, turbine=turbine, **params
+    )
+
+# wind
+def convert_wec(ds):
+
+    #Get power matrix
+    with open(r'./atlite/resources/wecgenerator/Farshore_750kW.yaml') as file:
+        gen = yaml.full_load(file)
+    power_matrix =pd.DataFrame.from_dict( gen['Power_Matrix'])
+
+    #max power
+    max_pow = power_matrix.to_numpy().max()
+ 
+    ###Round up values of Hs an Tp creating new datarrays
+    Hs = np.ceil(ds.wave_height*2)/2
+    Tp = np.ceil(ds.wave_period*2)/2
+
+    #Empty dataarray of results
+    da = xr.DataArray.copy(Hs)
+    da[:] = np.nan
+    da = da.rename('Specific power generation')
+    #Call datarrays values from the above dataset Dataset. need to modify function
+    #
+    #data arrya with results
+
+
+    for x in da.x.values:
+        
+        for y in da.y.values:
+            
+            for t in da.time.values:
+                
+                Hs_i= Hs.sel(x=x, y=y, time=t).values 
+                Tp_i = Tp.sel(x=x, y=y, time=t).values
+                if np.isnan(Hs_i) or np.isnan(Tp_i):
+                    power = np.nan
+                else:
+                    power =power_matrix.loc[Hs_i, Tp_i]
+                cap = power/max_pow
+                da.loc[dict(x= x, y= y,time = t )] = cap
+                print (t, x, y)
+                print (Hs_i, Tp_i, power, cap)
+
+
+    
+
+    # da = xr.apply_ufunc(
+    #     _interpolate,
+    #     wnd_hub,
+    #     input_core_dims=[[]],
+    #     output_core_dims=[[]],
+    #     output_dtypes=[wnd_hub.dtype],
+    #     dask="parallelized",
+    # )
+
+    da.attrs["units"] = "MWh/MWp"
+    da = da.rename("specific generation")
+    return da
+
+
+def wec(cutout, **params):
+    """
+    Generate wind generation time-series
+
+    Extrapolates 10m wind speed with monthly surface roughness to hub
+    height and evaluates the power curve.
+
+    Parameters
+    ----------
+    turbine : str or dict
+        A turbineconfig dictionary with the keys 'hub_height' for the
+        hub height and 'V', 'POW' defining the power curve.
+        Alternatively a str refering to a local or remote turbine configuration
+        as accepted by atlite.resource.get_windturbineconfig().
+
+
+    """
+
+    if isinstance(turbine, (str, Path)):
+        turbine = get_windturbineconfig(turbine)
+
+    return cutout.convert_and_aggregate(
+        convert_func=convert_wec, turbine=turbine, **params
     )
 
 
