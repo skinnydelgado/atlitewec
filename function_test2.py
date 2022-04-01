@@ -282,7 +282,7 @@ test = wec(cutout, capacity_factor = True, dask_kwargs = {'num_workers' : 4})
 r=cutout.data['wave_height']
 r
 # %%
-capacity_factor = cutout.wec(capacity_factor = True)#, dask_kwargs = {'num_workers' : 6})
+capacity_factor = cutout.wave(capacity_factor = True)#, dask_kwargs = {'num_workers' : 6})
 
 # %%
 cells = cutout.grid
