@@ -531,28 +531,35 @@ def wind(cutout, turbine, smooth=False, **params):
     )
 
 # wind
-def convert_wec(ds):
+def convert_wave(ds):
 
     #Get power matrix
-    power_matrix = pd.read_excel("PowerMatrix_PyPsa.xlsx", header = 2, usecols= "C:AN", index_col=0)
+    with open(r'./atlite/resources/wecgenerator/Farshore_750kW.yaml') as file:
+        gen = yaml.full_load(file)
+    power_matrix =pd.DataFrame.from_dict( gen['Power_Matrix'])
+
+    #power_matrix = pd.read_excel("PowerMatrix_PyPsa.xlsx", header = 2, usecols= "C:AN", index_col=0)
     #pm = power_matrix.to_xarray()
     #power_matrix = gen['Power_Matrix']
 
-    #max power
+    #max power & max possible output
     max_pow = power_matrix.to_numpy().max()
     #max_pow = 750
  
-    ###Round up values of Hs an Tp creating new datarrays
+    ###Round up values to closes 0.5 of Hs an Tp creating new datarrays in order to search along the Power matrix
     Hs = np.ceil(ds['wave_height']*2)/2
     Tp = np.ceil(ds['wave_period']*2)/2
 
+    #Flatten and create lists of arrays
     Hs_list = Hs.to_numpy().flatten().tolist()
     Tp_list = Tp.to_numpy().flatten().tolist()
 
+    #empty list for results
     power_list = []
     cases = len(Hs_list)
     count = 0
 
+    #For loop to loop through Hs and Tp pairs and get the power output&capacity factor
     for Hs_ind, Tp_ind in zip(Hs_list, Tp_list):
         if count % 1000 == 0:
             print('Case {} of {}: {} %'.format(count, cases, count/cases * 100))
@@ -564,11 +571,14 @@ def convert_wec(ds):
             power_list.append(generated_power/max_pow)
 
         count += 1            
-                
+
+    #results list to numpy array           
     power_list_np = np.array(power_list)
 
+    #reshape array into same shape as input Hs and Tp
     power_list_np = power_list_np.reshape(Hs.shape)       
 
+    #Create Dataarray with same coordinates and dimensions as Hs and Tp
     da = xr.DataArray(power_list_np, 
                         coords = Hs.coords, 
                         dims = Hs.dims, 
@@ -576,21 +586,17 @@ def convert_wec(ds):
     da.attrs["units"] = "KWh/KWp"
     da = da.rename("specific generation")
     return da
-def wec(cutout, **params):
+
+
+def wave(cutout, **params):
     """
-    Generate wind generation time-series
-
-    Extrapolates 10m wind speed with monthly surface roughness to hub
-    height and evaluates the power curve.
-
-    Parameters
-
+    Generate wave generation time-series
 
     """
 
  
     return cutout.convert_and_aggregate(
-        convert_func=convert_wec,  **params
+        convert_func=convert_wave,  **params
     )
 
 # solar PV

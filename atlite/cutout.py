@@ -52,7 +52,7 @@ from .convert import (
     soil_temperature,
     coefficient_of_performance,
     line_rating,
-    wec,
+    wave,
 )
 from .datasets import modules as datamodules
 
@@ -645,4 +645,4 @@ class Cutout:
 
     line_rating = line_rating
 
-    wec = wec
+    wave = wave
