@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC-BY-4.0
 
 # WEC generator characteristic data
-name: Farhsore
+name: Farshore
 
 Power_Matrix:
   0.0:

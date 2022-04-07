@@ -42,6 +42,7 @@ from .resource import (
     get_windturbineconfig,
     get_solarpanelconfig,
     windturbine_smooth,
+    get_wecgeneratorconfig
 )
 
 
@@ -531,13 +532,12 @@ def wind(cutout, turbine, smooth=False, **params):
     )
 
 # wind
-def convert_wave(ds):
+def convert_wave(ds, generator):
 
     #Get power matrix
-    with open(r'./atlite/resources/wecgenerator/Farshore_750kW.yaml') as file:
-        gen = yaml.full_load(file)
-    power_matrix =pd.DataFrame.from_dict( gen['Power_Matrix'])
-
+#
+    #power_matrix =pd.DataFrame.from_dict( gen['Power_Matrix'])
+    power_matrix = pd.DataFrame.from_dict(generator['Power_Matrix'])
     #power_matrix = pd.read_excel("PowerMatrix_PyPsa.xlsx", header = 2, usecols= "C:AN", index_col=0)
     #pm = power_matrix.to_xarray()
     #power_matrix = gen['Power_Matrix']
@@ -546,9 +546,14 @@ def convert_wave(ds):
     max_pow = power_matrix.to_numpy().max()
     #max_pow = 750
  
-    ###Round up values to closes 0.5 of Hs an Tp creating new datarrays in order to search along the Power matrix
+    ###Round up values to closes 0.5 of Hs creating new datarrays in order to search along the Power matrix
     Hs = np.ceil(ds['wave_height']*2)/2
-    Tp = np.ceil(ds['wave_period']*2)/2
+    
+    #Round up Tp either to next higher 0.5 or integer depending on the type of WEC generator. Tp in Power Matrix of Nearshore and Shallow 1 to 1, not 0.5 to 0.5
+    if generator['name'] == ('Farshore'):
+        Tp = np.ceil(ds['wave_period']*2)/2
+    else:
+        Tp = np.ceil(ds['wave_period'])
 
     #Flatten and create lists of arrays
     Hs_list = Hs.to_numpy().flatten().tolist()
@@ -561,11 +566,13 @@ def convert_wave(ds):
 
     #For loop to loop through Hs and Tp pairs and get the power output&capacity factor
     for Hs_ind, Tp_ind in zip(Hs_list, Tp_list):
-        if count % 1000 == 0:
+        if count % 100000 == 0:
             print('Case {} of {}: {} %'.format(count, cases, count/cases * 100))
 
         if np.isnan(Hs_ind) or np.isnan(Tp_ind):
-            power_list.append(np.nan)
+            power_list.append(0)
+        elif Hs_ind > 10 or Tp_ind > 18:
+            power_list.append(0)
         else:
             generated_power = power_matrix.loc[Hs_ind, Tp_ind]
             power_list.append(generated_power/max_pow)
@@ -585,18 +592,21 @@ def convert_wave(ds):
                         name = 'Power generated')
     da.attrs["units"] = "KWh/KWp"
     da = da.rename("specific generation")
+    da = da.fillna(0)
     return da
 
 
-def wave(cutout, **params):
+def wave(cutout, generator,  **params):
     """
     Generate wave generation time-series
 
     """
+    if isinstance(generator, (str, Path)):
+        generator = get_wecgeneratorconfig(generator)
 
  
     return cutout.convert_and_aggregate(
-        convert_func=convert_wave,  **params
+        convert_func=convert_wave, generator=generator , **params
     )
 
 # solar PV
