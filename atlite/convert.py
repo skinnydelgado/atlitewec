@@ -566,7 +566,7 @@ def convert_wave(ds, generator):
 
     #For loop to loop through Hs and Tp pairs and get the power output&capacity factor
     for Hs_ind, Tp_ind in zip(Hs_list, Tp_list):
-        if count % 100000 == 0:
+        if count % 1000000 == 0:
             print('Case {} of {}: {} %'.format(count, cases, count/cases * 100))
 
         if np.isnan(Hs_ind) or np.isnan(Tp_ind):
