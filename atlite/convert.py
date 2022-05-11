@@ -533,32 +533,20 @@ def wind(cutout, turbine, smooth=False, **params):
 
 # wind
 def convert_wave(ds, generator):
-
     #Get power matrix
-#
-    #power_matrix =pd.DataFrame.from_dict( gen['Power_Matrix'])
     power_matrix = pd.DataFrame.from_dict(generator['Power_Matrix'])
-    #power_matrix = pd.read_excel("PowerMatrix_PyPsa.xlsx", header = 2, usecols= "C:AN", index_col=0)
-    #pm = power_matrix.to_xarray()
-    #power_matrix = gen['Power_Matrix']
-
     #max power & max possible output
-    max_pow = power_matrix.to_numpy().max()
-    #max_pow = 750
- 
+    max_pow = power_matrix.to_numpy().max()  
     ###Round up values to closes 0.5 of Hs creating new datarrays in order to search along the Power matrix
-    Hs = np.ceil(ds['wave_height']*2)/2
-    
+    Hs = np.ceil(ds['wave_height']*2)/2    
     #Round up Tp either to next higher 0.5 or integer depending on the type of WEC generator. Tp in Power Matrix of Nearshore and Shallow 1 to 1, not 0.5 to 0.5
     if generator['name'] == ('Farshore'):
         Tp = np.ceil(ds['wave_period']*2)/2
     else:
         Tp = np.ceil(ds['wave_period'])
-
     #Flatten and create lists of arrays
     Hs_list = Hs.to_numpy().flatten().tolist()
     Tp_list = Tp.to_numpy().flatten().tolist()
-
     #empty list for results
     power_list = []
     cases = len(Hs_list)
@@ -576,7 +564,6 @@ def convert_wave(ds, generator):
         else:
             generated_power = power_matrix.loc[Hs_ind, Tp_ind]
             power_list.append(generated_power/max_pow)
-
         count += 1            
 
     #results list to numpy array           
